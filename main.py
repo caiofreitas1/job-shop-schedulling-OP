@@ -1,12 +1,28 @@
 import gurobipy as gp
 from gurobipy import GRB
+import matplotlib.pyplot as plt
+import numpy as np
+import colorsys
+import pandas as pd
+
+def generate_distinct_colors(num_colors):
+    colors = []
+    for i in range(num_colors):
+        hue = np.random.rand()  # Random hue
+        saturation = np.random.uniform(0.5, 0.8)  # Random saturation between 0.5 and 1.0
+        lightness = np.random.uniform(0.1, 0.8)  # Random lightness between 0.4 and 0.8
+        r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
+        colors.append((r, g, b))
+    return colors
 
 # Conjuntos e parâmetros (exemplo)
-J = [0, 1, 2]  # Conjunto de jobs
-M = [0, 1]  # Conjunto de máquinas
+n_jobs = 3
+n_machines = 2
+J = [x+1 for x in range(n_jobs)]  # Conjunto de jobs
+M = [x+1 for x in range(n_machines)]  # Conjunto de máquinas
 p = {
-    (0, 0): 3, (0, 1): 2, (0, 2): 2,
-    (1, 0): 2, (1, 1): 1, (1, 2): 4
+    (1, 1): 3, (1, 2): 2, (1, 3): 2,
+    (2, 1): 2, (2, 2): 1, (2, 3): 4
 }  # Tempo de processamento
 
 # Criação do modelo
@@ -21,7 +37,7 @@ C = model.addVar(vtype=GRB.CONTINUOUS, name="C")
 model.setObjective(C, GRB.MINIMIZE)
 
 # Restrições
-V = 1000  # Grande número
+V = 10000  # Grande número
 for j in J:
     for m in M:
         # Non-negativity
@@ -30,9 +46,9 @@ for j in J:
         # Makespan
         model.addConstr(x[m, j] + p[m, j] <= C)
 
-    for h in range(1, len(M)):
-        # Sequenciamento dentro de uma máquina
-        model.addConstr(x[m, j] + p[m, j] <= x[m, j] + x[h, j])
+        # Sequenciamento de etapas de cada Job
+        if m != 1:
+            model.addConstr(x[m-1, j] + p[m-1, j] <= x[m, j])
 
 for m in M:
     for j in J:
@@ -51,3 +67,37 @@ if model.status == GRB.OPTIMAL:
     for m in M:
         for j in J:
             print(f"Start time of job {j} on machine {m}: {x[m, j].X}")
+
+tasks = {}
+for j in J:
+    tasks[f"Job {j}"] = []
+    for m in M:
+        newJob = (m, x[m, j].X, p[m, j])
+        tasks[f"Job {j}"].append(newJob)
+        
+fig, ax = plt.subplots()
+
+# Definindo cores para cada tarefa
+colors = generate_distinct_colors(len(J))
+
+
+# Plotando as barras do gráfico
+for i, (task, intervals) in enumerate(tasks.items()):
+    for machine, start, duration in intervals:
+        ax.broken_barh([(start, duration)], (machine - 0.5, 1), facecolors=(colors[i % len(colors)]), label=task)
+
+# Ajustando a legenda para não repetir labels
+handles, labels = ax.get_legend_handles_labels()
+unique_labels = dict(zip(labels, handles))
+ax.legend(unique_labels.values(), unique_labels.keys())
+
+# Ajustando os eixos
+ax.set_ylim(0.5, len(M)+0.5)
+ax.set_xlim(0, C.X)
+ax.set_xlabel('Time')
+ax.set_ylabel('Machine')
+ax.set_yticks(np.arange(1,len(M)+0.5,1))
+plt.show()
+
+df = pd.DataFrame(tasks)
+print(df)
