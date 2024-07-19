@@ -5,6 +5,9 @@ import numpy as np
 import colorsys
 import pandas as pd
 
+from instances import get_instance_data
+
+
 def generate_distinct_colors(num_colors):
     colors = []
     for i in range(num_colors):
@@ -15,15 +18,15 @@ def generate_distinct_colors(num_colors):
         colors.append((r, g, b))
     return colors
 
-# Conjuntos e parâmetros (exemplo)
-n_jobs = 3
-n_machines = 2
-J = [x+1 for x in range(n_jobs)]  # Conjunto de jobs
-M = [x+1 for x in range(n_machines)]  # Conjunto de máquinas
-p = {
-    (1, 1): 3, (1, 2): 2, (1, 3): 2,
-    (2, 1): 2, (2, 2): 1, (2, 3): 4
-}  # Tempo de processamento
+# Dados da instância
+instance_data = get_instance_data("ft06")
+n_jobs, n_machines = instance_data["jobs_machines"]
+J = [x + 1 for x in range(n_jobs)]
+M = [x + 1 for x in range(n_machines)]
+p = {}
+for i, job_data in enumerate(instance_data["data"]):
+    for j in range(len(job_data)):
+        p[(i + 1, j + 1)] = job_data[j]
 
 # Criação do modelo
 model = gp.Model("JobShopScheduling")
@@ -48,7 +51,7 @@ for j in J:
 
         # Sequenciamento de etapas de cada Job
         if m != 1:
-            model.addConstr(x[m-1, j] + p[m-1, j] <= x[m, j])
+            model.addConstr(x[m - 1, j] + p[m - 1, j] <= x[m, j])
 
 for m in M:
     for j in J:
@@ -74,12 +77,11 @@ for j in J:
     for m in M:
         newJob = (m, x[m, j].X, p[m, j])
         tasks[f"Job {j}"].append(newJob)
-        
+
 fig, ax = plt.subplots()
 
 # Definindo cores para cada tarefa
 colors = generate_distinct_colors(len(J))
-
 
 # Plotando as barras do gráfico
 for i, (task, intervals) in enumerate(tasks.items()):
@@ -92,11 +94,11 @@ unique_labels = dict(zip(labels, handles))
 ax.legend(unique_labels.values(), unique_labels.keys())
 
 # Ajustando os eixos
-ax.set_ylim(0.5, len(M)+0.5)
+ax.set_ylim(0.5, len(M) + 0.5)
 ax.set_xlim(0, C.X)
 ax.set_xlabel('Time')
 ax.set_ylabel('Machine')
-ax.set_yticks(np.arange(1,len(M)+0.5,1))
+ax.set_yticks(np.arange(1, len(M) + 0.5, 1))
 plt.show()
 
 df = pd.DataFrame(tasks)
