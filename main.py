@@ -10,6 +10,7 @@ from instances import get_instance_data
 
 def generate_distinct_colors(num_colors):
     colors = []
+    np.random.seed(9)
     for i in range(num_colors):
         hue = np.random.rand()  # Random hue
         saturation = np.random.uniform(0.5, 0.8)  # Random saturation between 0.5 and 1.0
@@ -24,9 +25,9 @@ n_jobs, n_machines = instance_data["jobs_machines"]
 J = [x + 1 for x in range(n_jobs)]
 M = [x + 1 for x in range(n_machines)]
 p = {}
-for i, job_data in enumerate(instance_data["data"]):
-    for j in range(len(job_data)):
-        p[(i + 1, j + 1)] = job_data[j]
+for j, job_data in enumerate(instance_data["data"]):
+    for i in range(int(len(job_data)/2)):
+        p[(job_data[i * 2] + 1, j + 1)] = job_data[i * 2 + 1]
 
 # Criação do modelo
 model = gp.Model("JobShopScheduling")
@@ -39,6 +40,8 @@ C = model.addVar(vtype=GRB.CONTINUOUS, name="C")
 # Função objetivo: minimizar o makespan
 model.setObjective(C, GRB.MINIMIZE)
 
+p_list = list(p.items())
+
 # Restrições
 V = 10000  # Grande número
 for j in J:
@@ -49,9 +52,11 @@ for j in J:
         # Makespan
         model.addConstr(x[m, j] + p[m, j] <= C)
 
-        # Sequenciamento de etapas de cada Job
-        if m != 1:
-            model.addConstr(x[m - 1, j] + p[m - 1, j] <= x[m, j])
+    for k in range(6):
+        if k != 0:
+            machine = p_list[((j - 1) * 6) + k][0][0]
+            prev_machine = p_list[((j - 1) * 6) + k - 1][0][0]
+            model.addConstr(x[machine, j] + p[machine, j] <= x[prev_machine, j])
 
 for m in M:
     for j in J:
@@ -66,10 +71,10 @@ model.optimize()
 
 # Exibir resultados
 if model.status == GRB.OPTIMAL:
-    print(f"Optimal makespan: {C.X}")
     for m in M:
         for j in J:
             print(f"Start time of job {j} on machine {m}: {x[m, j].X}")
+    print(f"Optimal makespan: {C.X}")
 
 tasks = {}
 for j in J:
