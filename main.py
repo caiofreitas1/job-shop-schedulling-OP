@@ -52,10 +52,10 @@ for j in J:
         # Makespan
         model.addConstr(x[m, j] + p[m, j] <= C)
 
-    for k in range(6):
+    for k in range(n_machines):
         if k != 0:
-            machine = p_list[((j - 1) * 6) + k][0][0]
-            prev_machine = p_list[((j - 1) * 6) + k - 1][0][0]
+            machine = p_list[((j - 1) * n_machines) + k][0][0]
+            prev_machine = p_list[((j - 1) * n_machines) + k - 1][0][0]
             model.addConstr(x[machine, j] + p[machine, j] <= x[prev_machine, j])
 
 for m in M:
