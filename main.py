@@ -20,7 +20,7 @@ def generate_distinct_colors(num_colors):
     return colors
 
 # Dados da instância
-instance_data = get_instance_data("ft06")
+instance_data = get_instance_data("la01")
 n_jobs, n_machines = instance_data["jobs_machines"]
 J = [x + 1 for x in range(n_jobs)]
 M = [x + 1 for x in range(n_machines)]
