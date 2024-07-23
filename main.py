@@ -21,6 +21,7 @@ def generate_distinct_colors(num_colors):
 
 # Dados da instância
 instance_data = get_instance_data("la01")
+ft06 = load_benchmark_instance("ft06")
 n_jobs, n_machines = instance_data["jobs_machines"]
 J = [x + 1 for x in range(n_jobs)]
 M = [x + 1 for x in range(n_machines)]
